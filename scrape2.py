@@ -106,7 +106,7 @@ def searchClass(tagType, myClass):
     return myList
 
 def whoPublishedThis(soup):    
-   if (len(searchClass(("div"),("SAGECopyright"))[0]) > 0):
+   if (len(searchClass(("div"),("SAGECopyright"))[1]) > 0):
        return 'SAGE'
    elif(len(searchString('any', 'DOI cannot be found in the DOI System')[0]) > 0):
        return 'ERROR'
