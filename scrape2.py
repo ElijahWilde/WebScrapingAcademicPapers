@@ -156,7 +156,7 @@ for doi in dois:
             
             if (pub == 'SAGE'):
                 numSage += 1
-                sage_papers.append(doi, soups)
+                sage_papers.append((doi, soups))
                 print("paper appended to 'sage_papers'")
             elif (pub == 'ERROR'):
                 doi_does_not_return_paper.append(doi)
