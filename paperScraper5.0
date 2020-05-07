@@ -1,0 +1,389 @@
+import pandas as pd
+import re
+
+paper_information = [] #dicts
+no_doi = [] #list
+fixed_dois = [] #(publisher, origonal citation, fixed doi)
+doi_still_broken = [] #(publisher, origonal citation, bad doi)
+
+#FORMATTING DATA===============================================================
+df = pd.read_csv(r'C:\Users\emet\Desktop\COMP\Freelon\journal_articles_1.csv')
+
+list_of_citations = []
+dois =[]
+
+#iterate over data frame and fill the above three variables ^^
+for i in range(len(df)):
+    
+    citation = df.iloc[i,0]
+    list_of_citations.append(citation)
+    
+    doi = re.findall("DOI 10(.*)", citation)
+    
+    if (len(doi) > 0):
+        dois.append("10." + doi[0])
+
+    else:
+        no_doi.append(citation)
+
+#SETTING UP SOUP===============================================================    
+import requests
+from bs4 import BeautifulSoup
+
+headers = requests.utils.default_headers()
+
+user_agent_list = [
+   #Chrome
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 5.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.157 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36',
+    #Firefox
+    'Mozilla/4.0 (compatible; MSIE 9.0; Windows NT 6.1)',
+    'Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko',
+    'Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)',
+    'Mozilla/5.0 (Windows NT 6.1; Trident/7.0; rv:11.0) like Gecko',
+    'Mozilla/5.0 (Windows NT 6.2; WOW64; Trident/7.0; rv:11.0) like Gecko',
+    'Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko',
+    'Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.0; Trident/5.0)',
+    'Mozilla/5.0 (Windows NT 6.3; WOW64; Trident/7.0; rv:11.0) like Gecko',
+    'Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)',
+    'Mozilla/5.0 (Windows NT 6.1; Win64; x64; Trident/7.0; rv:11.0) like Gecko',
+    'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; WOW64; Trident/6.0)',
+    'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; Trident/6.0)',
+    'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/4.0; .NET CLR 2.0.50727; .NET CLR 3.0.4506.2152; .NET CLR 3.5.30729)'
+]
+
+
+#SOUP HELPER FUNCTIONS=========================================================          
+        
+def searchString(tagType, searchTerm, soups): #tag type can be "any"
+    myList = []
+    if tagType == "any":
+        for soup in soups:
+            myList.append(soup.find_all(text = re.compile(searchTerm)))
+    else:
+        for soup in soups:
+            myList.append(soup.find_all(tagType, text = re.compile(searchTerm)))
+    
+    return myList
+
+def searchClass(tagType, myClass, soups):
+    myList = []
+    for soup in soups:
+        myList.append(soup.find_all(tagType, {'class':  myClass}))
+    return myList
+
+
+#OTHER SMALL HELPER FUNCTIONS==================================================
+
+def findCitation(doi):
+    for cit in list_of_citations:
+        if doi.strip('https://doi.org/10.').replace(".","") in cit:
+            return cit
+        
+def findRank(author):
+    #TODO
+    return 'captain'
+
+def guessGender(author):
+    #TODO 
+    return 'werewolf'
+    
+def findCountry(uni):
+    #TODO 
+    return 'neverland'
+
+def doiNotFound(soups):
+    return (len(searchString('any', 'DOI cannot be found in the DOI System', soups)[0]) > 0)
+
+def makeBlankDict():
+    myDict = {
+        'title':'',
+        'num_authors':'',
+        'authors':[
+                        {
+                        'name':'Sample McExample',
+                        'gender':'',
+                        'institution':'',
+                        'country':'',
+                        'rank':'',
+                        'departement':'' #I added this because it was avalable from some of the publishers
+                        }
+                    ],
+        'origonal_citation':'',
+        'DOI':'',
+        'date_published':'',
+        'publisher':''
+    }
+    myDict['authors'].pop(0)
+    return myDict
+
+#DOI FIXING AND INFORMATION EXTRACTING FUNCTIONS===============================
+'''
+Journal Key!
+
+W == works without adding periods
+P == needs periods added
+E == throws connection errors
+
+10.1016 == Science Direct (W)
+10.1037 == APA Psych Net (P)
+10.1080 == Taylor and Francis Online (P)
+10.1086 == Oxford Journal of Communication (E)
+10.1093 == (Oxford) Public Opinion Quarterly (E)
+10.1111 == Also Oxford Journal of Communication (P) (E?)
+10.1177 == Sage Journals (W)
+10.1207 == Also Taylor and Francis Online (W)
+10.1287 == Informs PubsOnLine (P)
+10.2307 == 50% chance of being either Cambrige University Press or JSTOR (W)
+'''
+
+def findPubAndFix(doi): #finds the publisher and fixes the DOI
+    publisher = ''
+    doiEnding = re.findall("https:\/\/doi\.org\/[0-9\.]*\/(.*)", doi)[0].replace(".","")
+    jourNum = re.findall("https:\/\/doi\.org\/([0-9\.]*\/)", doi)[0]
+    
+    if jourNum == '10.1016/':
+        publisher = 'Science Direct'
+    
+    elif jourNum == '10.1037/':
+        publisher = 'APA Psych Net'
+        doiEnding = doiEnding[:9] + '.' + doiEnding[9:11] + '.' + doiEnding[11:12] + '.' + doiEnding[-3:]
+        
+    elif jourNum in ('10.1080/', '10.1207/'): 
+        publisher = 'Taylor and Francis Online'
+        if jourNum == '10.1080/':
+            doiEnding = doiEnding[:8] + '.' + doiEnding[8:12] + '.' + doiEnding[-8:]
+            
+    elif jourNum in ('10.1086/', '10.1093/', '10.1111/'): 
+        publisher = 'Oxford'
+        if jourNum == '10.1111/':
+            doiEnding = doiEnding[:1] + '.' + doiEnding[1:10] + '.' + doiEnding[10:14] + '.' + doiEnding[14:21] + '.' + doiEnding[-1]
+        
+    elif jourNum == '10.1177/':
+        publisher = 'Sage Journals'
+    
+    elif jourNum == '10.1287/':   
+        publisher = 'Informs PubsOnLine'
+        doiEnding = doiEnding[:4] + '.' + doiEnding[4:6] + '.' + doiEnding[6:7] + '.' + doiEnding[-3:]
+        
+    elif jourNum == '10.2307/':
+        publisher = 'Cambrige University Press or JSTOR'
+        
+    else:
+        publisher = 'Publisher Not Found: ' + jourNum
+        
+    return (publisher, 'https://doi.org/' + jourNum + doiEnding)
+
+
+def extractInfo(pub, doi, soups):
+    
+    myDict = makeBlankDict()
+
+    if (pub == 'Science Direct'):
+        #TODO
+        TODO = True
+        
+    elif (pub == 'APA Psych Net'):
+        #TODO
+        TODO = True
+    
+    elif (pub == 'Taylor and Francis Online'):
+        title_div = searchClass('span', 'NLM_article-title hlFld-title', soups)[0][0]
+        myDict['title'] = re.findall(">([^<]*)<", str(title_div))[0]
+        author_divs = searchClass('a', 'entryAuthor', soups)
+               
+        authors = []
+        unis = []
+        depts = []
+        for elem in author_divs[0]:
+            elem = str(elem)
+            authors.append(re.findall('href="[^"]*">([a-zA-Z .]*)<', elem)[0])
+            unis.append(re.findall('([UNIuni]{3}[ a-zA-Z]*) <', elem))
+            depts.append(re.findall('class="overlay"> ([a-zA-Z ]*) [UNIuni]{3}', elem))
+        
+        myDict['num_authors'] = len(authors)
+               
+        i = 0
+        while (i < myDict['num_authors']):
+            myDict['authors'].append({
+                    'name':authors[i],
+                    'gender':guessGender(authors[i]),
+                    'institution': "author location not on page" if (len(unis) <= i) else unis[i],
+                    'country': "author location not on page" if (len(unis) <= i) else findCountry(unis[i]),
+                    'rank':findRank(authors[i]),
+                    'departement':depts[i]
+                   })
+            i += 1       
+               
+        myDict['origonal_citation'] = findCitation(doi)
+        myDict['DOI'] = doi
+        pub_date = str(searchString('any','Published online',soups)[0])
+        myDict['date_published'] = re.findall(": ([0-9a-zA-Z ]*)", pub_date)[0]
+        myDict['publisher'] = 'Taylor and Francis Online';
+               
+        
+    elif (pub == 'Sage Journals'):
+       title_div = str(searchString('title', '.',soups)[0][0])
+       myDict['title'] = re.findall("le>(.*) - ", title_div)[0]
+       
+       authors = re.findall("[-,] ([a-zA-Z][^,]*)", title_div)
+       myDict['num_authors'] = len(authors)
+       
+       auth_institutions = []
+       for div in searchClass('div', 'artice-info-affiliation', soups).pop():
+           uni = re.findall('">([A-Za-z ]*)<\/div',str(div.text))
+           auth_institutions.append(uni)
+           
+       i = 0
+       while (i < myDict['num_authors']):
+           myDict['authors'].append({
+                   'name':authors[i],
+                   'gender':guessGender(authors[i]),
+                   'institution': "author location not on page" if (len(auth_institutions) <= i) else auth_institutions[i],
+                   'country': "author location not on page" if (len(auth_institutions) <= i) else findCountry(auth_institutions[i]),
+                   'rank':findRank(authors[i]),
+                   'departement':'not avalable for Sage Journals'
+                   })
+           i += 1
+           
+       myDict['origonal_citation'] = findCitation(doi)
+       myDict['DOI'] = doi
+       myDict['date_published'] = re.findall('<\/b> ([a-zA-Z 0-9,]*)',str(searchClass('span','publicationContentEpubDate',soups)[1]))[0]
+       myDict['publisher'] = 'Sage Journals';
+    
+    elif (pub == 'Informs PubsOnLine'):
+        #TODO
+        TODO = True
+        
+    elif (pub == 'JSTOR'):
+        #TODO
+        TODO = True
+        
+    else:
+        print('Publisher Not Found: ' + pub)
+    
+    return myDict
+
+    
+#SEARCHING DATA================================================================
+import random
+import time
+
+dois = ["https://doi.org/"+doi.replace('//','/') if doi != "" else doi for doi in dois]
+
+paper_information = [] #dicts
+fixed_dois = [] #(publisher, origonal citation, fixed doi)
+doi_still_broken = [] #(publisher, origonal citation, bad doi)
+
+numPapersDone = 0
+sleep_time = .5
+
+for doi in dois:
+      
+    numPapersDone += 1
+    print(numPapersDone)
+    
+    publisher, doi = findPubAndFix(doi)
+    
+    if publisher == 'Oxford':
+        works = False
+        try:
+             headers.update({ 'User-Agent': random.choice(user_agent_list)}) #switch browsers to keep em guessing
+             req = requests.get(doi, headers)
+        except: 
+            works = True
+        if (not works):
+            soup0 = BeautifulSoup(req.content, 'xml')
+            soup1 = BeautifulSoup(req.content, 'html.parser')
+            soup2 = BeautifulSoup(req.content, 'lxml') 
+            soups = [soup0,soup1,soup2]
+            if doiNotFound(soups):
+                works = True
+        if works:
+            fixed_dois.append((publisher,findCitation(doi),doi))
+        else:
+            doi_still_broken.append((publisher,findCitation(doi),doi))
+        time.sleep(sleep_time)
+        continue
+    
+    headers.update({ 'User-Agent': random.choice(user_agent_list)}) #switch browsers to keep em guessing
+    req = requests.get(doi, headers)
+    
+    soup0 = BeautifulSoup(req.content, 'xml')
+    soup1 = BeautifulSoup(req.content, 'html.parser')
+    soup2 = BeautifulSoup(req.content, 'lxml') 
+    soups = [soup0,soup1,soup2] #in case I need to add more parsers
+    
+    if (doiNotFound(soups)):
+        print('doi did not return a valid paper: ' + doi)
+        doi_still_broken.append((publisher,findCitation(doi),doi))
+        time.sleep(sleep_time)
+        continue
+    elif publisher in ('Sage Journals','Taylor and Francis Online'):
+        if (len(searchClass("div","SAGECopyright",soups)[1]) > 0):
+            publisher = "Sage Journals"
+        paper_information.append((extractInfo(publisher, doi, soups))) #extract info returns a dict 
+
+    fixed_dois.append((publisher,findCitation(doi),doi))
+    time.sleep(sleep_time)
+
+
+
+
+
+import csv
+
+#PAPER INFORMATION
+with open(r'C:\Users\emet\Desktop\COMP\Freelon\paper_information.csv', 'w', newline='') as myfile:
+     wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+     wr.writerow(['Title','Num_Authors','Name_First_Author','Departement','Institution','Origonal_Citation','DOI','Date_Published','Publisher'])
+     for elem in paper_information:
+         wr.writerow([elem['title'],elem['num_authors'],elem['authors'][0]['name'],elem['authors'][0]['departement'],elem['authors'][0]['institution'],elem['origonal_citation'],elem['DOI'],elem['date_published'],elem['publisher']])
+
+#NO DOI
+with open(r'C:\Users\emet\Desktop\COMP\Freelon\no_doi.csv', 'w', newline='') as myfile:
+     wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+     wr.writerow(['Citation'])
+     for elem in no_doi:
+         wr.writerow([elem])
+
+#FIXED DOIS
+with open(r'C:\Users\emet\Desktop\COMP\Freelon\fixed_dois.csv', 'w', newline='') as myfile:
+     wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+     wr.writerow(['Publisher','Origonal DOI','Fixed DOI'])
+     for elem in fixed_dois:
+         wr.writerow([elem[0], elem[1], elem[2]])
+
+#DOI STILL BROKEN
+with open(r'C:\Users\emet\Desktop\COMP\Freelon\doi_still_broken.csv', 'w', newline='') as myfile:
+     wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+     wr.writerow(['Publisher','Origonal DOI','Fixed DOI'])
+     for elem in doi_still_broken:
+         wr.writerow([elem[0], elem[1], elem[2]])
+
+
+
+
+
+
+
+# Workspace===========================================
+
+#WON:
+    #-Sage Publishing
+    #-Taylor and Francis Online
+    
+#LOST:
+    #-Science Direct (they have some sort of protocol that detects and stops scrapers. Other people have trouble with it too)
+    #-Oxford (uses captchas and throws connection erros)
+    #-APA Psych Net (actively blocks scrapers and returns a page that says 'You reached this page when attempting to access https://psycnet.apa.org/')
+    #-Informs PubsOnLine (returns a page that says 'to request an unblock, please fill out the form below and we will review it as soon as possible')
+    #-Cambrige University Press or JSTOR (returns a page with 'ERROR: Page Loading Error generated via Fastly Servers')
